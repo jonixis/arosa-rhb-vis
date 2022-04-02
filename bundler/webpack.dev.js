@@ -1,35 +1,35 @@
-const { merge } = require('webpack-merge')
-const commonConfiguration = require('./webpack.common.js')
-const portFinderSync = require('portfinder-sync')
+const { merge } = require('webpack-merge');
+const commonConfiguration = require('./webpack.common.js');
+const portFinderSync = require('portfinder-sync');
 
 const infoColor = (_message) => {
-    return `\u001b[1m\u001b[34m${_message}\u001b[39m\u001b[22m`
-}
+  return `\u001b[1m\u001b[34m${_message}\u001b[39m\u001b[22m`;
+};
 
 module.exports = merge(
-    commonConfiguration,
-    {
-        mode: 'development',
-        devServer:
+  commonConfiguration,
+  {
+    mode: 'development',
+    devServer:
         {
-            host: 'localhost',
-            port: portFinderSync.getPort(8080),
-            static: {
-                directory: './dist',
-                watch: true
-            },
-            open: true,
-            https: false,
-            allowedHosts: 'all',
-            onAfterSetupMiddleware: function (devServer) {
-                const port = devServer.options.port
-                const https = devServer.options.https ? 's' : ''
-                const localIp = '127.0.0.1'
-                const domain1 = `http${https}://${localIp}:${port}`
-                const domain2 = `http${https}://localhost:${port}`
+          host: '0.0.0.0',
+          port: portFinderSync.getPort(8080),
+          static: {
+            directory: './dist',
+            watch: true
+          },
+          open: true,
+          https: false,
+          allowedHosts: 'all',
+          onAfterSetupMiddleware: function (devServer) {
+            const port = devServer.options.port;
+            const https = devServer.options.https ? 's' : '';
+            const localIp = '127.0.0.1';
+            const domain1 = `http${https}://${localIp}:${port}`;
+            const domain2 = `http${https}://localhost:${port}`;
 
-                console.log(`Project running at:\n  - ${infoColor(domain1)}\n  - ${infoColor(domain2)}`)
-            }
+            console.log(`Project running at:\n  - ${infoColor(domain1)}\n  - ${infoColor(domain2)}`);
+          }
         }
-    }
-)
+  }
+);

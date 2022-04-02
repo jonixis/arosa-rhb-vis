@@ -1,10 +1,6 @@
-# Three.js Starter
-Courtesy of Bruno Simon of https://threejs-journey.xyz/
+# Arosa-Chur RhB Visualization
 
 ## Setup
-Download [Node.js](https://nodejs.org/en/download/).
-Run this followed commands:
-
 ``` bash
 # Install dependencies (only the first time)
 npm install
@@ -15,3 +11,7 @@ npm run dev
 # Build for production in the dist/ directory
 npm run build
 ```
+
+## Credits
+Built based on the [template](https://github.com/designcourse/threejs-webpack-starter) by Bruno Simon of https://threejs-journey.xyz/
+

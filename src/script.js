@@ -1,105 +1,172 @@
-import './style.css'
-import * as THREE from 'three'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import * as dat from 'dat.gui'
+import './style.css';
+
+import * as THREE from 'three';
+import * as dat from 'dat.gui';
+
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import Stats from 'three/examples/jsm/libs/stats.module';
 
 // Debug
-const gui = new dat.GUI()
+const gui = new dat.GUI();
+const stats = Stats();
+document.body.appendChild(stats.dom);
 
 // Canvas
-const canvas = document.querySelector('canvas.webgl')
+const canvas = document.querySelector('canvas.webgl');
 
 // Scene
-const scene = new THREE.Scene()
-
-// Objects
-const geometry = new THREE.TorusGeometry( .7, .2, 16, 100 );
-
-// Materials
-
-const material = new THREE.MeshBasicMaterial()
-material.color = new THREE.Color(0xff0000)
-
-// Mesh
-const sphere = new THREE.Mesh(geometry,material)
-scene.add(sphere)
+const scene = new THREE.Scene();
 
 // Lights
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+scene.add(ambientLight);
 
-const pointLight = new THREE.PointLight(0xffffff, 0.1)
-pointLight.position.x = 2
-pointLight.position.y = 3
-pointLight.position.z = 4
-scene.add(pointLight)
+const hemisphereLight = new THREE.HemisphereLight(0xffffbb, 0x080820, 0.6);
+scene.add(hemisphereLight);
+
+const sunLight = new THREE.DirectionalLight(0xffefbf, 0.9);
+sunLight.position.set(0, 30, 0);
+sunLight.castShadow = true;
+scene.add(sunLight);
+
+sunLight.shadow.mapSize.width = 64;
+sunLight.shadow.mapSize.height = 64;
+
+const d = 35;
+sunLight.shadow.camera.left = - d;
+sunLight.shadow.camera.right = d;
+sunLight.shadow.camera.top = d;
+sunLight.shadow.camera.bottom = - d;
+
+sunLight.shadow.camera.far = 50;
+sunLight.shadow.bias = -0.0001;
+
+// const helper = new THREE.CameraHelper(sunLight.shadow.camera)
+// scene.add(helper)
+
+// GLTF Loader
+const gltfLoader = new GLTFLoader();
+
+// Terrain mesh
+gltfLoader.load('models/arosa-rhb.glb',
+  (gltf) => {
+    sunLight.target = gltf.scene;
+    gltf.scene.scale.set(0.01,0.01,0.01);
+    gltf.scene.traverse((child) => {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
+    });
+    scene.add(gltf.scene);
+  }, (xhr) => {
+    console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+  }, (error) => {
+    console.log('An error happened: ', error);
+  });
+
+// Railway mesh
+gltfLoader.load('models/arosa-rhb-railway.glb',
+  (gltf) => {
+    gltf.scene.scale.set(0.01,0.01,0.01);
+    gltf.scene.traverse((child) => {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
+    });
+    scene.add(gltf.scene);
+  }, (xhr) => {
+    console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+  }, (error) => {
+    console.log('An error happened: ', error);
+  });
+
+// Plane
+const planeMaterial = new THREE.MeshStandardMaterial({ color: 'darkgrey', side: THREE.DoubleSide });
+const plane = new THREE.PlaneGeometry(100, 60);
+const planeMesh = new THREE.Mesh(plane, planeMaterial);
+planeMesh.receiveShadow = true;
+planeMesh.position.set(0, -4, 0);
+planeMesh.rotateX(Math.PI * 0.5);
+scene.add(planeMesh);
 
 /**
  * Sizes
  */
 const sizes = {
-    width: window.innerWidth,
-    height: window.innerHeight
-}
+  width: window.innerWidth,
+  height: window.innerHeight
+};
 
-window.addEventListener('resize', () =>
-{
-    // Update sizes
-    sizes.width = window.innerWidth
-    sizes.height = window.innerHeight
+window.addEventListener('resize', () => {
+  // Update sizes
+  sizes.width = window.innerWidth;
+  sizes.height = window.innerHeight;
 
-    // Update camera
-    camera.aspect = sizes.width / sizes.height
-    camera.updateProjectionMatrix()
+  // Update camera
+  camera.aspect = sizes.width / sizes.height;
+  camera.updateProjectionMatrix();
 
-    // Update renderer
-    renderer.setSize(sizes.width, sizes.height)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-})
+  // Update renderer
+  renderer.setSize(sizes.width, sizes.height);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+});
 
 /**
  * Camera
  */
-// Base camera
-const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100)
-camera.position.x = 0
-camera.position.y = 0
-camera.position.z = 2
-scene.add(camera)
+const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 20000);
+camera.position.set(0, 25, -37);
+scene.add(camera);
+
+// Add camera position to gui
+const guiCamFolder = gui.addFolder('Camera');
+guiCamFolder.add(camera.position, 'x').listen();
+guiCamFolder.add(camera.position, 'y').listen();
+guiCamFolder.add(camera.position, 'z').listen();
+guiCamFolder.open();
 
 // Controls
-// const controls = new OrbitControls(camera, canvas)
+const controls = new OrbitControls(camera, canvas);
 // controls.enableDamping = true
 
 /**
  * Renderer
  */
 const renderer = new THREE.WebGLRenderer({
-    canvas: canvas
-})
-renderer.setSize(sizes.width, sizes.height)
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  canvas: canvas
+});
+renderer.setSize(sizes.width, sizes.height);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 /**
  * Animate
  */
 
-const clock = new THREE.Clock()
+// const clock = new THREE.Clock();
 
-const tick = () =>
-{
+const tick = () => {
 
-    const elapsedTime = clock.getElapsedTime()
+  // const elapsedTime = clock.getElapsedTime();
 
-    // Update objects
-    sphere.rotation.y = .5 * elapsedTime
+  // Update objects
+  // sphere.rotation.y = .5 * elapsedTime;
 
-    // Update Orbital Controls
-    // controls.update()
+  // Update Orbital Controls
+  controls.update();
 
-    // Render
-    renderer.render(scene, camera)
+  // Render
+  renderer.render(scene, camera);
 
-    // Call tick again on the next frame
-    window.requestAnimationFrame(tick)
-}
+  // Update stats
+  stats.update();
 
-tick()
+  // Call tick again on the next frame
+  window.requestAnimationFrame(tick);
+};
+
+tick();
