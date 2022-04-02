@@ -18,32 +18,37 @@ const canvas = document.querySelector('canvas.webgl');
 // Scene
 const scene = new THREE.Scene();
 
-// Lights
+/**
+ * Lights
+ */ 
+
+// Ambient lighting
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
 scene.add(ambientLight);
 
-const hemisphereLight = new THREE.HemisphereLight(0xffffbb, 0x080820, 0.6);
-scene.add(hemisphereLight);
+// Directional sun light
+const sunLightTop = new THREE.DirectionalLight(0xffefbf, 0.9);
+sunLightTop.position.set(0, 30, 0);
+sunLightTop.castShadow = true;
+scene.add(sunLightTop);
 
-const sunLight = new THREE.DirectionalLight(0xffefbf, 0.9);
-sunLight.position.set(0, 30, 0);
-sunLight.castShadow = true;
-scene.add(sunLight);
-
-sunLight.shadow.mapSize.width = 64;
-sunLight.shadow.mapSize.height = 64;
+// Setup shadow map
+sunLightTop.shadow.mapSize.width = 64;
+sunLightTop.shadow.mapSize.height = 64;
+sunLightTop.shadow.autoUpdate = false;
 
 const d = 35;
-sunLight.shadow.camera.left = - d;
-sunLight.shadow.camera.right = d;
-sunLight.shadow.camera.top = d;
-sunLight.shadow.camera.bottom = - d;
+sunLightTop.shadow.camera.left = - d;
+sunLightTop.shadow.camera.right = d;
+sunLightTop.shadow.camera.top = d;
+sunLightTop.shadow.camera.bottom = - d;
 
-sunLight.shadow.camera.far = 50;
-sunLight.shadow.bias = -0.0001;
+sunLightTop.shadow.camera.far = 50;
+sunLightTop.shadow.bias = -0.0001;
 
-// const helper = new THREE.CameraHelper(sunLight.shadow.camera)
-// scene.add(helper)
+const sunLight = new THREE.DirectionalLight(0xffefbf, 0.9);
+sunLight.position.set(-40, 20, 0);
+scene.add(sunLight);
 
 // GLTF Loader
 const gltfLoader = new GLTFLoader();
@@ -51,7 +56,7 @@ const gltfLoader = new GLTFLoader();
 // Terrain mesh
 gltfLoader.load('models/arosa-rhb.glb',
   (gltf) => {
-    sunLight.target = gltf.scene;
+    sunLightTop.target = gltf.scene;
     gltf.scene.scale.set(0.01,0.01,0.01);
     gltf.scene.traverse((child) => {
       if (child.isMesh) {
@@ -59,6 +64,8 @@ gltfLoader.load('models/arosa-rhb.glb',
         child.receiveShadow = true;
       }
     });
+    // Update shadow map from top sun light on next render
+    sunLightTop.shadow.needsUpdate = true;
     scene.add(gltf.scene);
   }, (xhr) => {
     console.log((xhr.loaded / xhr.total * 100) + '% loaded');
@@ -85,7 +92,7 @@ gltfLoader.load('models/arosa-rhb-railway.glb',
 
 // Plane
 const planeMaterial = new THREE.MeshStandardMaterial({ color: 'darkgrey', side: THREE.DoubleSide });
-const plane = new THREE.PlaneGeometry(100, 60);
+const plane = new THREE.PlaneGeometry(80, 80);
 const planeMesh = new THREE.Mesh(plane, planeMaterial);
 planeMesh.receiveShadow = true;
 planeMesh.position.set(0, -4, 0);
@@ -118,7 +125,7 @@ window.addEventListener('resize', () => {
  * Camera
  */
 const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 20000);
-camera.position.set(0, 25, -37);
+camera.position.set(-38, 24, -32);
 scene.add(camera);
 
 // Add camera position to gui
