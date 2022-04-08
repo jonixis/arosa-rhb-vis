@@ -18,7 +18,7 @@ module.exports = merge(
             directory: './dist',
             watch: true
           },
-          open: true,
+          open: false,
           https: false,
           allowedHosts: 'all',
           onAfterSetupMiddleware: function (devServer) {
