@@ -5,16 +5,13 @@ import * as dat from 'dat.gui';
 
 import { MeshLine, MeshLineMaterial } from 'three.meshline';
 
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MapControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass';
 import Stats from 'three/examples/jsm/libs/stats.module';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import fragment from './shaders/composeFrag.js';
-import vertex from './shaders/composeVert.js';
+
+// import fragment from './shaders/composeFrag.js';
+// import vertex from './shaders/composeVert.js';
 
 // Debug
 const gui = new dat.GUI();
@@ -26,10 +23,6 @@ const canvas = document.querySelector('canvas.webgl');
 
 // Scene
 const scene = new THREE.Scene();
-
-const BLOOM_LAYER = 1;
-const bloomLayer = new THREE.Layers();
-bloomLayer.set(BLOOM_LAYER);
 
 /**
  * Lights
@@ -89,8 +82,8 @@ gltfLoader.load('models/arosa-rhb.glb',
 // Railway mesh
 const animatedMeshLineMaterial = new MeshLineMaterial({
   transparent: true,
-  lineWidth: 0.009,
-  color: new THREE.Color('red'),
+  lineWidth: 0.008,
+  color: new THREE.Color('#ff2248'),
   sizeAttenuation: 0,
   dashArray: 3,     // always has to be the double of the line
   dashOffset: 0,    // start the dash at zero
@@ -99,9 +92,9 @@ const animatedMeshLineMaterial = new MeshLineMaterial({
 
 const staticMeshLineMaterial = new MeshLineMaterial({
   transparent: true,
-  opacity: 0.3,
-  lineWidth: 0.004,
-  color: new THREE.Color('red'),
+  opacity: 0.4,
+  lineWidth: 0.005,
+  color: new THREE.Color('#ff2248'),
   sizeAttenuation: 0,
 });
 
@@ -112,7 +105,7 @@ const updateLine = (deltaTime) => {
   } 
 
   // Decrement the dashOffset value to animate the path with the dash.
-  animatedMeshLineMaterial.uniforms.dashOffset.value -= deltaTime * 0.05;
+  animatedMeshLineMaterial.uniforms.dashOffset.value -= deltaTime * 0.03;
 };
 
 const objLoader = new OBJLoader();
@@ -126,9 +119,8 @@ objLoader.load('models/arosa-rhb-railway.obj',
       const staticMesh = new THREE.Mesh(meshLine, staticMeshLineMaterial);
       animatedMesh.scale.set(0.01, 0.014, 0.01);
       staticMesh.scale.set(0.01, 0.014, 0.01);
-      animatedMesh.translateY(0.01);
-      staticMesh.translateY(0.01);
-      animatedMesh.layers.enable(BLOOM_LAYER);
+      animatedMesh.translateY(0.03);
+      staticMesh.translateY(0.02);
       scene.add(animatedMesh);
       scene.add(staticMesh);
     });
@@ -139,7 +131,7 @@ objLoader.load('models/arosa-rhb-railway.obj',
   });
 
 // Plane
-const planeMaterial = new THREE.MeshStandardMaterial({ color: 'grey', side: THREE.DoubleSide });
+const planeMaterial = new THREE.MeshStandardMaterial({ color: 'white', side: THREE.DoubleSide });
 const plane = new THREE.PlaneGeometry(80, 80);
 const planeMesh = new THREE.Mesh(plane, planeMaterial);
 planeMesh.receiveShadow = true;
@@ -201,64 +193,29 @@ document.addEventListener('keydown', (ev) => {
  * Renderer
  */
 const renderer = new THREE.WebGLRenderer({
-  canvas: canvas
+  canvas: canvas,
+  // powerPreference: 'high-performance',
+  antialias: true,
 });
+
 renderer.setSize(sizes.width, sizes.height);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputEncoding = THREE.sRGBEncoding;
  
 /**
  * Post-Processing Passes
  */
-const bloomComposer = new EffectComposer(renderer);
-bloomComposer.renderToScreen = false;
-const renderPass = new RenderPass(scene, camera);
-bloomComposer.addPass(renderPass);
-const bloomPass = new UnrealBloomPass(new THREE.Vector2( sizes.width, sizes.height ), 1.0, 0.9, 0.0);
-bloomComposer.addPass(bloomPass);
-
-const combinePass = new ShaderPass(new THREE.ShaderMaterial({
-  uniforms: {
-    baseTexture: { value: null},
-    bloomTexture: { value: bloomComposer.renderTarget2.texture }
-  },
-  vertexShader: vertex,
-  fragmentShader: fragment
-}), 'baseTexture');
-combinePass.needsSwap = true;
-
-const finalComposer = new EffectComposer(renderer);
-finalComposer.addPass(renderPass);
-finalComposer.addPass(combinePass);
-
-const darkMaterial = new THREE.MeshBasicMaterial( { color: 'black' } );
-const materials = {};
-
-const renderBloom = () => {
-  scene.traverse((object) => {
-    if (object.isMesh && bloomLayer.test(object.layers) === false) {
-      materials[object.uuid] = object.material;
-      object.material = darkMaterial;
-    }
-  });
-  bloomComposer.render();
-  scene.traverse((object) => {
-    if (materials[object.uuid]) {
-      object.material = materials[object.uuid];
-      delete materials[object.uuid];
-    }
-  });
-};
+// TODO Add bloom effect
 
 /**
- * Animate
+ * Render loop
  */
 
 const clock = new THREE.Clock();
 
-
-const tick = () => {
+const render = () => {
   const deltaTime = clock.getDelta();
   // Update objects
   updateLine(deltaTime);
@@ -267,14 +224,13 @@ const tick = () => {
   controls.update(deltaTime);
 
   // Render
-  renderBloom();
-  finalComposer.render(deltaTime);
+  renderer.render(scene, camera);
 
   // Update stats
   stats.update();
 
-  // Call tick again on the next frame
-  window.requestAnimationFrame(tick);
+  // Call render again on the next frame
+  window.requestAnimationFrame(render);
 };
 
-tick();
+render();
